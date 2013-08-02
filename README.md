@@ -5,4 +5,3 @@ _Working_
 
 _To Do_
 * Create API
-* Create application
