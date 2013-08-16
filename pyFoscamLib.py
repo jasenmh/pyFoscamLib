@@ -35,9 +35,7 @@ class camera:
       return -1;
 
     nurl = "http://" + self.url + "/" + command
-    print nurl;
-    if self.userName != "" and self.passWord != "":
-      nurl += "?user=" + self.userName + "&pwd=" + self.passWord
+    nurl += "?user=" + self.userName + "&pwd=" + self.passWord
 
     r = urllib2.urlopen(nurl)
     resp = r.readlines()
@@ -45,14 +43,16 @@ class camera:
     return resp
 
   def getStatus(self):
-    resp = self.queryCamera('get_status.cgi')
+    if self.userName != "" and self.passWord != "":
+      resp = self.queryCamera('get_status.cgi')
+    else:
+      resp = self.queryCameraSecure('get_status.cgi')
 
     if resp == -1:
       status = -1
     else:
       status = {}
       for line in resp:
-        # line = line.lstrip('var ')
         line = line[4:] # strip "var "
         line = line.rstrip(';\n')
         parts = line.split('=')
@@ -64,6 +64,12 @@ class camera:
     return status
 
   def connect(self, uname = None, pword = None):
+    if (uname == None and pword != None) or (uname != None and pword == None):
+      return -1
+    else:
+      self.userName = uname
+      self.passWord = pword
+
     status = self.getStatus()
 
     if status == -1:
