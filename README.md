@@ -5,5 +5,5 @@ _Working_
 * Query camera status
 
 _To Do_
-* Enable/disable motion detection
+* [Test] Enable/disable motion detection
 * Capture image from camera
