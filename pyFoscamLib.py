@@ -56,7 +56,7 @@ class camera:
 
   # ---------- Public methods ----------
   def getStatus(self):
-      resp = self.__queryCamera('get_status.cgi')
+    resp = self.__queryCamera('get_status.cgi')
 
     if resp == -1:
       status = -1
@@ -70,17 +70,18 @@ class camera:
           status[parts[0]] = int(parts[1])
         else:
           status[parts[0]] = parts[1].replace("'", "")
-          if parts[0] == 'alarm_status':
-            self.alarmStatus = status['alarm_status']
-          elif parts[0] == 'id':
-            self.cameraId = status['id']
-          elif parts[0] == 'alias':
-            self.cameraName = status['alias']
+
+        if parts[0] == 'alarm_status':
+          self.alarmStatus = status['alarm_status']
+        elif parts[0] == 'id':
+          self.cameraId = status['id']
+        elif parts[0] == 'alias':
+          self.cameraName = status['alias']
 
     return status
 
-  def setMotionAlarm(self, alarmOn = True)
-    if alarmOn:
+  def setMotionAlarm(self, alarmOn):
+    if alarmOn == True:
       arg = "motion_armed=1"
     else:
       arg = "motion_armed=0"
