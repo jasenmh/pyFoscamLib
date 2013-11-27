@@ -19,7 +19,8 @@ class camera:
     self.cameraId = ""
     self.cameraName = ""
 
-  def queryCamera(self, command):
+  # ---------- Private methods ----------
+  def __queryCamera(self, command):
     if self.url == "":
       return -1;
 
@@ -30,7 +31,7 @@ class camera:
  
     return resp
 
-  def queryCameraSecure(self, command):
+  def __queryCameraSecure(self, command):
     if self.url == "":
       return -1;
 
@@ -42,6 +43,7 @@ class camera:
  
     return resp
 
+  # ---------- Public methods ----------
   def getStatus(self):
     if self.userName != "" and self.passWord != "":
       resp = self.queryCamera('get_status.cgi')
