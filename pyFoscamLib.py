@@ -63,13 +63,14 @@ class camera:
 
     return status
 
-  def connect(self, uname = None, pword = None):
+  def connect(self, url, uname = None, pword = None):
     if (uname == None and pword != None) or (uname != None and pword == None):
       return -1
     else:
       self.userName = uname
       self.passWord = pword
 
+    self.url = url
     status = self.getStatus()
 
     if status == -1:
@@ -79,3 +80,6 @@ class camera:
     self.cameraName = status['alias']
 
     return 1
+
+if __name__ == "__main__":
+  print("pyFoscam: import this module to use it")
