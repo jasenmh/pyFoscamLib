@@ -18,36 +18,41 @@ class camera:
     self.passWord = ""
     self.cameraId = ""
     self.cameraName = ""
+    self.alarmStatus = ""
 
   # ---------- Private methods ----------
-  def __queryCameraNonSecure(self, command):
+  def __queryCameraNonSecure(self, command, arg = None):
     if self.url == "":
       return -1;
 
     nurl = "http://" + self.url + "/" + command
+    if arg != None:
+      nurl = nurl + "?" + arg
 
     r = urllib2.urlopen(nurl)
     resp = r.readlines()
  
     return resp
 
-  def __queryCameraSecure(self, command):
+  def __queryCameraSecure(self, command, arg = None):
     if self.url == "":
       return -1;
 
     nurl = "http://" + self.url + "/" + command
     nurl += "?user=" + self.userName + "&pwd=" + self.passWord
+    if arg != None:
+      nurl = nurl + "&" + arg
 
     r = urllib2.urlopen(nurl)
     resp = r.readlines()
  
     return resp
 
-  def __queryCamera(self, command):
+  def __queryCamera(self, command, arg = None):
     if self.userName != "" and self.passWord != "":
-      return self.__queryCameraNonSecure(command)
+      return self.__queryCameraNonSecure(command, arg)
     else:
-      return self.__queryCameraSecure(command)
+      return self.__queryCameraSecure(command, arg)
 
   # ---------- Public methods ----------
   def getStatus(self):
@@ -65,8 +70,27 @@ class camera:
           status[parts[0]] = int(parts[1])
         else:
           status[parts[0]] = parts[1].replace("'", "")
+          if parts[0] == 'alarm_status':
+            self.alarmStatus = status['alarm_status']
+          elif parts[0] == 'id':
+            self.cameraId = status['id']
+          elif parts[0] == 'alias':
+            self.cameraName = status['alias']
 
     return status
+
+  def setMotionAlarm(self, alarmOn = True)
+    if alarmOn:
+      arg = "motion_armed=1"
+    else:
+      arg = "motion_armed=0"
+
+    resp = self.__queryCamera('set_alarm.cgi', arg)
+
+    if resp == -1:
+      return -1
+    else:
+      return 1
 
   def connect(self, url, uname = None, pword = None):
     if (uname == None and pword != None) or (uname != None and pword == None):
@@ -81,8 +105,9 @@ class camera:
     if status == -1:
       return -1
 
-    self.cameraId = status['id']
-    self.cameraName = status['alias']
+    # These are caught in getStatus() now
+    #self.cameraId = status['id']
+    #self.cameraName = status['alias']
 
     return 1
 
