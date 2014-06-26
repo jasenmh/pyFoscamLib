@@ -6,35 +6,25 @@ This module facilitates the use of a Foscam FI8918W IP Camera. It may work
 with other Foscam (or any other) cameras that have the same API.
 """
 
-class camera:
+class fi8918w:
 
   """
   This class can be used to send commands to a Foscam IP camera.
   """
 
-  def __init__(self):
-    self.url = ""
-    self.userName = ""
-    self.passWord = ""
+  def __init__(self, url="", userName="", passWord=""):
+    self.url = url
+    self.userName = userName
+    self.passWord = passWord
     self.cameraId = ""
     self.cameraName = ""
     self.alarmStatus = ""
 
   # ---------- Private methods ----------
-  def __queryCameraNonSecure(self, command, arg = None):
-    if self.url == "":
-      return -1;
+  def __queryCamera(self, command, arg = None):
+    if self.userName == "" or self.passWord == "":
+      return -1
 
-    nurl = "http://" + self.url + "/" + command
-    if arg != None:
-      nurl = nurl + "?" + arg
-
-    r = urllib2.urlopen(nurl)
-    resp = r.readlines()
- 
-    return resp
-
-  def __queryCameraSecure(self, command, arg = None):
     if self.url == "":
       return -1;
 
@@ -45,14 +35,29 @@ class camera:
 
     r = urllib2.urlopen(nurl)
     resp = r.readlines()
+    #resp = r.read()
  
     return resp
 
-  def __queryCamera(self, command, arg = None):
-    if self.userName != "" and self.passWord != "":
-      return self.__queryCameraNonSecure(command, arg)
-    else:
-      return self.__queryCameraSecure(command, arg)
+  def __queryCameraBinary(self, command, arg = 'picture', ext = 'jpg'):
+    if self.userName == "" or self.passWord == "":
+      return -1
+
+    if self.url == "":
+      return -1
+
+    nurl = "http://" + self.url + "/" + command
+    nurl += "?user=" + self.userName + "&pwd=" + self.passWord
+    nurl += "&next_url=" + arg
+
+    fname = arg + '.' + ext
+
+    b = urllib2.urlopen(nurl)
+    fout = open(fname, 'wb')
+    fout.write(b.read())
+    fout.close()
+
+    return fname
 
   # ---------- Public methods ----------
   def getStatus(self):
@@ -66,10 +71,11 @@ class camera:
         line = line[4:] # strip "var "
         line = line.rstrip(';\n')
         parts = line.split('=')
-        if parts[1].rfind("'") == -1:
-          status[parts[0]] = int(parts[1])
-        else:
-          status[parts[0]] = parts[1].replace("'", "")
+        if len(parts) > 1:
+          if parts[1].rfind("'") == -1:
+            status[parts[0]] = parts[1]
+          else:
+            status[parts[0]] = parts[1].replace("'", "")
 
         if parts[0] == 'alarm_status':
           self.alarmStatus = status['alarm_status']
@@ -93,24 +99,11 @@ class camera:
     else:
       return 1
 
-  def connect(self, url, uname = None, pword = None):
-    if (uname == None and pword != None) or (uname != None and pword == None):
-      return -1
-    else:
-      self.userName = uname
-      self.passWord = pword
+  def getSnapshot(self, fname='picture'):
+    status = self.__queryCameraBinary('snapshot.cgi', fname)
 
-    self.url = url
-    status = self.getStatus()
+    return status
 
-    if status == -1:
-      return -1
-
-    # These are caught in getStatus() now
-    #self.cameraId = status['id']
-    #self.cameraName = status['alias']
-
-    return 1
 
 if __name__ == "__main__":
   print("pyFoscam: import this module to use it")
