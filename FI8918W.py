@@ -54,7 +54,7 @@ class fi8918w:
         req.add_header("Authorization", authheader)
         return urllib2.urlopen(req)
 
-    def _query_camera(self, command, arg=None):
+    def _query_camera(self, command):
         """ This method sends requests/commands to the camera when the return does not need to be saved to a binary file.
         :param command: cgi request/command to the camera
         :return: returns the urllib2.urlopen return value
@@ -82,6 +82,13 @@ class fi8918w:
         with open(arg, 'wb') as fout:
             fout.write(b.read())
         return arg
+
+    def _cam_pzt_step(self, command, degrees):
+        if degrees < 1:
+            # invalid movement amount makes the camera do funny things
+            return -1
+        return self._query_camera('decoder_control.cgi?command={0}&onestep=1&degree={1}'.format(command, degrees))
+
 
     # ---------- Public methods ----------
     def getStatus(self):
@@ -134,8 +141,82 @@ class fi8918w:
         """ This method sends command 94 to the camera which turns off the infrared emitters
         :return: returns the url2lib response from the camera
         """
-        resp = self._query_camera('decoder_control.cgi?command=94')
-        return resp
+        return self._query_camera('decoder_control.cgi?command=94')
+
+    def cam_step_up(self, degrees=1):
+        """ Send command 0 (up) to the decoder_control.cgi to make the camera move up
+        :param degrees: degrees of the desired move
+        :return: -1 on invalid commands or move amount
+        """
+        return self._cam_pzt_step(command=0, degrees=degrees)
+
+    def cam_step_down(self, degrees=1):
+        """ Send command 2 (down) to the decoder_control.cgi to make the camera move down
+        :param degrees: degrees of the desired move
+        :return: -1 on invalid commands or move amount
+        """
+        return self._cam_pzt_step(command=2, degrees=degrees)
+
+    def cam_step_left(self, degrees=1):
+        """ Send command 6 (left) to the decoder_control.cgi to make the camera move left.  Note this is opposite of the
+        camera documentation.  This was tested with camera on desk.
+        :param degrees: degrees of the desired move
+        :return: -1 on invalid commands or move amount
+        """
+        return self._cam_pzt_step(command=6, degrees=degrees)
+
+    def cam_step_right(self, degrees=1):
+        """ Send command 4 (right) to the decoder_control.cgi to make the camera move right.  Note this is opposite of the
+        camera documentation.  This was tested with camera on desk.
+        :param degrees: degrees of the desired move
+        :return: -1 on invalid commands or move amount
+        """
+        return self._cam_pzt_step(command=4, degrees=degrees)
+
+    def start_patrol(self, vert=False, horiz=False):
+        """
+        :param vert: Setting to True enables veritcal patrol mode
+        :param horiz: Setting to True enables horizontal patrol mode
+        """
+        if vert:
+            self._query_camera('decoder_control.cgi?command=26')
+        if horiz:
+            self._query_camera('decoder_control.cgi?command=28')
+
+    def stop_patrol(self, vert=False, horiz=False):
+        """
+        :param vert: Setting to True stops veritcal patrol mode
+        :param horiz: Setting to True stops horizontal patrol mode
+        """
+        if vert:
+            self._query_camera('decoder_control.cgi?command=27')
+        if horiz:
+            self._query_camera('decoder_control.cgi?command=29')
+
+    def set_preset(self, preset_num=1):
+        """ Sets the non-volatile preset indicated to the current PZT position
+        :param preset_num: location 1-8 for presets
+        :return: -1 on failure otherwise the urllib2 response
+        """
+        if 0 > preset_num > 8:
+            # Invalid preset #
+            return -1
+            # commands 30..45 alternate set preset #, goto preset# starting at command 30
+        command = (preset_num * 2 - 2) + 30
+        self._query_camera('decoder_control.cgi?command={0}'.format(command))
+
+    def goto_preset(self, preset_num=1):
+        """ Moves the PZT to the non-volatile preset indicated
+        :param preset_num: location 1-8 for presets
+        :return: -1 on failure otherwise the urllib2 response
+        """
+        if 0 > preset_num > 8:
+            # Invalid preset #
+            return -1
+        # commands 30..45 alternate set preset #, goto preset# starting at command 30
+        command = (preset_num * 2 - 1) + 30
+        self._query_camera('decoder_control.cgi?command={0}'.format(command))
+
 
 if __name__ == "__main__":
     print("pyFoscam: import this module to use it")
