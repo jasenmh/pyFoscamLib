@@ -1,5 +1,7 @@
 import urllib
 import urllib2
+import numpy as np
+import cv2
 
 """
 This module facilitates the use of a Foscam FI8918W IP Camera. It may work
@@ -18,7 +20,7 @@ class fi8918w:
     self.passWord = passWord
     self.cameraId = ""
     self.cameraName = ""
-    self.alarmStatus = ""
+    self.irStatus = ""
 
   # ---------- Private methods ----------
   def __queryCamera(self, command, arg = None):
@@ -39,7 +41,7 @@ class fi8918w:
  
     return resp
 
-  def __queryCameraBinary(self, command, arg = 'picture', ext = 'jpg'):
+  def __queryCameraBinaryToFile(self, command, arg = 'picture', ext = 'jpg'):
     if self.userName == "" or self.passWord == "":
       return -1
 
@@ -59,9 +61,26 @@ class fi8918w:
 
     return fname
 
+  def __queryCameraBinaryToImage(self, command):
+    if self.userName == "" or self.passWord == "":
+      return -1
+
+    if self.url == "":
+      return -1
+
+    nurl = "http://" + self.url + "/" + command
+    nurl += "?user=" + self.userName + "&pwd=" + self.passWord
+
+    b = urllib2.urlopen(nurl)
+    img_str = b.read()
+    nparr = np.fromstring(img_str, np.uint8)
+    img = cv2.imdecode(nparr, cv2.CV_LOAD_IMAGE_COLOR)
+
+    return img
+
   # ---------- Public methods ----------
   def getStatus(self):
-    resp = self.__queryCamera('get_status.cgi')
+    resp = self.__queryCamera('get_params.cgi')
 
     if resp == -1:
       status = -1
@@ -77,8 +96,8 @@ class fi8918w:
           else:
             status[parts[0]] = parts[1].replace("'", "")
 
-        if parts[0] == 'alarm_status':
-          self.alarmStatus = status['alarm_status']
+        if parts[0] == 'alarm_motion_armed':
+          self.irStatus = status['alarm_motion_armed']
         elif parts[0] == 'id':
           self.cameraId = status['id']
         elif parts[0] == 'alias':
@@ -99,8 +118,26 @@ class fi8918w:
     else:
       return 1
 
-  def getSnapshot(self, fname='picture'):
-    status = self.__queryCameraBinary('snapshot.cgi', fname)
+  def setIr(self, irOn):
+    if irOn == True:
+      arg = "command=95"
+    else:
+      arg = "command=94"
+
+    resp = self.__queryCamera('decoder_control.cgi', arg)
+
+    if resp == -1:
+      return -1
+    else:
+      return 1
+
+  def getSnapshotToFile(self, fname='picture'):
+    status = self.__queryCameraBinaryToFile('snapshot.cgi', fname)
+
+    return status
+
+  def getSnapshotToImage(self):
+    status = self.__queryCameraBinaryToImage('snapshot.cgi')
 
     return status
 
