@@ -3,8 +3,6 @@ import re
 import base64
 import sys
 import os
-import numpy as np
-import cv2
 
 
 class fi8918w:
@@ -19,6 +17,7 @@ class fi8918w:
         self.camera_id = ""
         self.camera_name = ""
         self.alarm_status = ""
+        self.authheader = None
 
     # ---------- Private methods ----------
     def _basic_auth(self, url):
@@ -32,28 +31,31 @@ class fi8918w:
             return -1
         # Make a request
         req = urllib2.Request(url)
-        try:
-            handle = urllib2.urlopen(req)
-        except IOError, e:
-            # Here we want to fail if there's authentication required on this page and we'll continue
-            pass
-        else:
-            # This page is not protected by authentication
-            return handle
-        # Extract the scheme and realm in using reg-ex
-        authline = e.headers['www-authenticate']
-        authobj = re.compile(r'''(?:\s*www-authenticate\s*:)?\s*(\w*)\s+realm=['"]([^'"]+)['"]''', re.IGNORECASE)
-        matchobj = authobj.match(authline)
-        scheme = matchobj.group(1)
-        realm = matchobj.group(2)   # un-used
-        if scheme.lower() != 'basic':
-            print "Basic authentication failed for some reason"
-            sys.exit(1)
-        # Encode the basic authentication into a base64 string
-        base64string = base64.encodestring('%s:%s' % (self.username, self.password))[:-1]
-        authheader = "Basic %s" % base64string
+        # If we haven't set up authentication yet, try to cache it
+        if not self.authheader:
+            # Encode the basic authentication into a base64 string
+            try:
+                handle = urllib2.urlopen(req)
+            except IOError, e:
+                # Here we want to fail if there's authentication required on this page and we'll continue
+                pass
+            else:
+                # This page is not protected by authentication
+                return handle
+            # Extract the scheme and realm in using reg-ex
+            authline = e.headers['www-authenticate']
+            authobj = re.compile(r'''(?:\s*www-authenticate\s*:)?\s*(\w*)\s+realm=['"]([^'"]+)['"]''', re.IGNORECASE)
+            matchobj = authobj.match(authline)
+            scheme = matchobj.group(1)
+            _ = matchobj.group(2)   # un-used.  This would be the realm, left here for completeness
+            if scheme.lower() != 'basic':
+                print "Basic authentication failed for some reason"
+                sys.exit(1)
+            base64string = base64.encodestring('%s:%s' % (self.username, self.password))[:-1]
+            self.authheader = "Basic %s" % base64string
+
         # Add the authentication header
-        req.add_header("Authorization", authheader)
+        req.add_header("Authorization", self.authheader)
         return urllib2.urlopen(req)
 
     def _query_camera(self, command):
@@ -67,7 +69,7 @@ class fi8918w:
         # Set up the basic authentication, and get the data
         return self._basic_auth(nurl)
 
-    def _query_camera_binary(self, command, arg='picture'):
+    def _query_camera_binary(self, command):
         """
         This method sends requests/commands to the camera when the return does need to be saved to a binary file.
         Used for saving snapshots from the camera for example.
@@ -78,12 +80,8 @@ class fi8918w:
         if not self.camera_url or not command:
             return -1
         nurl = "http://" + self.camera_url + "/" + command
-        # Binary commands pass the filename to the next_url parameter without  file extension
-        nurl += "?next_url=" + os.path.splitext(arg)[0]
         b = self._basic_auth(nurl)
-        with open(arg, 'wb') as fout:
-            fout.write(b.read())
-        return arg
+        return b.read()
 
     def _cam_pzt_step(self, command, degrees):
         if degrees < 1:
@@ -91,10 +89,9 @@ class fi8918w:
             return -1
         return self._query_camera('decoder_control.cgi?command={0}&onestep=1&degree={1}'.format(command, degrees))
 
-
     # ---------- Public methods ----------
-    def getStatus(self):
-        resp = self._query_camera('get_status.cgi')
+    def get_status(self):
+        resp = self._query_camera('get_params.cgi')
 
         if resp == -1:
             status = -1
@@ -105,22 +102,15 @@ class fi8918w:
                 line = line.rstrip(';\n')
                 parts = line.split('=')
                 if len(parts) > 1:
-                    if parts[1].rfind("'") == -1:
-                        status[parts[0]] = parts[1]
-                    else:
-                        status[parts[0]] = parts[1].replace("'", "")
+                    status[parts[0]] = parts[1].replace("'", "")
 
-                if parts[0] == 'alarm_status':
-                    self.alarm_status = status['alarm_status']
-                elif parts[0] == 'id':
-                    self.camera_id = status['id']
-                elif parts[0] == 'alias':
-                    self.camera_name = status['alias']
+            self.camera_id = status['id']
+            self.camera_name = status['alias']
 
         return status
 
-    def setMotionAlarm(self, alarmOn):
-        if alarmOn:
+    def set_motion_alarm(self, alarm):
+        if alarm:
             arg = "motion_armed=1"
         else:
             arg = "motion_armed=0"
@@ -129,8 +119,17 @@ class fi8918w:
 
         return -1 if resp == -1 else 1
 
-    def getSnapshot(self, fname='picture'):
-        return self._query_camera_binary('snapshot.cgi', fname)
+    def get_snapshot(self, fname=None):
+        """ This method gets a snapshot from the camera and returns the image string.  If a filename is specified it writes
+        out to the file too
+        :param fname: optional, name of an image file to which the data will be written
+        :return: returns the image string
+        """
+        img_str = self._query_camera_binary('snapshot.cgi')
+        if fname:
+            with open(fname, 'wb') as fout:
+                fout.write(img_str)
+        return img_str
 
     def ir_on(self):
         """ This method sends command 95 to the camera which turns on the infrared emitters
