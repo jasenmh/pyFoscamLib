@@ -2,7 +2,6 @@ import urllib2
 import re
 import base64
 import sys
-import os
 
 
 class fi8918w:
