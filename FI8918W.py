@@ -3,6 +3,8 @@ import re
 import base64
 import sys
 import os
+import numpy as np
+import cv2
 
 
 class fi8918w:
