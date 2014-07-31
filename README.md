@@ -7,6 +7,7 @@ _Working_
 * Toggle IR on/off
 * Pan/tilt camera
 * Set and go to preset positions
+* Patrol mode
 * Authenticates through basic auth (when needed)
 
 _To Do_
