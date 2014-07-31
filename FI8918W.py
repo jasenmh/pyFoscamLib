@@ -48,7 +48,7 @@ class fi8918w:
             scheme = matchobj.group(1)
             _ = matchobj.group(2)   # un-used.  This would be the realm, left here for completeness
             if scheme.lower() != 'basic':
-                print "Basic authentication failed for some reason"
+                print "Basic authentication failed for some reason (scheme is %s)" % (scheme.lower())
                 sys.exit(1)
             base64string = base64.encodestring('%s:%s' % (self.username, self.password))[:-1]
             self.authheader = "Basic %s" % base64string
