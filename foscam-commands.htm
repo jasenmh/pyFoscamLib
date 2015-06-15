@@ -1,0 +1,371 @@
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+<link rel="stylesheet" href="style.css" type="text/css">
+<title></title>
+</head>
+<style>
+body{
+  font: arial;
+}
+</style>
+
+<script> 
+	document.write('<script src="get_camera_params.cgi?user='+encodeURIComponent(top.user)+'&pwd='+encodeURIComponent(top.pwd)+'"><\/script>');
+</script>
+<script language="javascript">
+var R320_240=8;
+var R640_480=32;
+var ptz_type=0;	
+var PTZ_STOP=1;
+var TILT_UP=0;
+var TILT_UP_STOP=1;
+var TILT_DOWN=2;
+var TILT_DOWN_STOP=3;
+var PAN_LEFT=6;
+var PAN_LEFT_STOP=5;
+var PAN_RIGHT=4;
+var PAN_RIGHT_STOP=7;
+var PTZ_LEFT_UP=91;
+var PTZ_RIGHT_UP=90;
+var PTZ_LEFT_DOWN=93;
+var PTZ_RIGHT_DOWN=92;
+var PTZ_CENTER=25;
+var PTZ_VPATROL=26;
+var PTZ_VPATROL_STOP=27;
+var PTZ_HPATROL=28;
+var PTZ_HPATROL_STOP=29;
+var PTZ_PELCO_D_HPATROL=20;
+var PTZ_PELCO_D_HPATROL_STOP=21;
+var IO_ON=95;
+var IO_OFF=94;
+function decoder_control(command)
+{
+	action_zone.location='decoder_control.cgi?command='+command+'&user='+encodeURIComponent(top.user)+'&pwd='+encodeURIComponent(top.pwd);
+}
+function camera_control(param,value)
+{
+	action_zone.location='camera_control.cgi?param='+param+'&value='+value+'&user='+encodeURIComponent(top.user)+'&pwd='+encodeURIComponent(top.pwd);
+}
+function set_flip()
+{
+	if (image_reversal.checked)
+		flip|=1;
+	else
+		flip&=2;
+	if (image_mirror.checked)
+		flip|=2;
+	else
+		flip&=1;	
+	camera_control(5,flip);
+}
+function up_onmousedown() 
+{
+	(flip&0x01)?decoder_control(TILT_DOWN):decoder_control(TILT_UP);
+}
+function up_onmouseup() 
+{
+	if (!ptz_type)
+		decoder_control(PTZ_STOP);
+	else if (flip&0x01)
+		decoder_control(TILT_DOWN_STOP);
+	else	
+		decoder_control(TILT_UP_STOP);
+}
+	
+
+function down_onmouseover() 
+{
+	down.src="images/down_down.png";
+}
+
+function down_onmouseout() 
+{
+	down.src="images/down_up.png";
+}
+
+function down_onmousedown() 
+{
+	
+	(flip&0x01)?decoder_control(TILT_UP):decoder_control(TILT_DOWN);
+
+}
+function down_onmouseup() 
+{
+	if (!ptz_type)
+		decoder_control(PTZ_STOP);
+	else if (flip&0x01)
+		decoder_control(TILT_UP_STOP);
+	else
+		decoder_control(TILT_DOWN_STOP);	
+}
+function left_onmousedown() 
+{
+	(flip&0x02)?decoder_control(PAN_RIGHT):decoder_control(PAN_LEFT);
+}
+function left_onmouseup() 
+{
+	if (!ptz_type)
+		decoder_control(PTZ_STOP);
+	else if (flip&0x02)
+		decoder_control(PAN_RIGHT_STOP);
+	else	
+		decoder_control(PAN_LEFT_STOP);	
+}
+function right_onmousedown() 
+{
+	(flip&0x02)?decoder_control(PAN_LEFT):decoder_control(PAN_RIGHT);
+}
+function right_onmouseup() 
+{
+	if (!ptz_type)
+		decoder_control(PTZ_STOP);
+	else if (flip&0x02)
+		decoder_control(PAN_LEFT_STOP);
+	else	
+		decoder_control(PAN_RIGHT_STOP);
+}
+function leftup_onmousedown() 
+{
+	if (ptz_type)
+		return;
+	if ((flip&0x03)==0x03)
+		decoder_control(PTZ_RIGHT_DOWN);
+	else if (flip&0x02)
+		decoder_control(PTZ_RIGHT_UP);
+	else if (flip&0x01)
+		decoder_control(PTZ_LEFT_DOWN);
+	else		
+		decoder_control(PTZ_LEFT_UP);
+}
+function leftup_onmouseup() 
+{
+	if (!ptz_type) decoder_control(PTZ_STOP);
+}
+function rightup_onmousedown() 
+{
+	if (ptz_type)
+		return;
+	if ((flip&0x03)==0x03)
+		decoder_control(PTZ_LEFT_DOWN);
+	else if (flip&0x02)
+		decoder_control(PTZ_LEFT_UP);
+	else if (flip&0x01)
+		decoder_control(PTZ_RIGHT_DOWN);
+	else		
+		decoder_control(PTZ_RIGHT_UP);
+}
+function rightup_onmouseup() 
+{
+	if (!ptz_type) decoder_control(PTZ_STOP);
+}
+function leftdown_onmousedown() 
+{
+	if (ptz_type)
+		return;
+	if ((flip&0x03)==0x03)
+		decoder_control(PTZ_RIGHT_UP);
+	else if (flip&0x02)
+		decoder_control(PTZ_RIGHT_DOWN);
+	else if (flip&0x01)
+		decoder_control(PTZ_LEFT_UP);
+	else		
+		decoder_control(PTZ_LEFT_DOWN);
+}
+function leftdown_onmouseup() 
+{
+	if (!ptz_type) decoder_control(PTZ_STOP);
+}
+function rightdown_onmousedown() 
+{
+	if (ptz_type)
+		return;
+	if ((flip&0x03)==0x03)
+		decoder_control(PTZ_LEFT_UP);
+	else if (flip&0x02)
+		decoder_control(PTZ_LEFT_DOWN);
+	else if (flip&0x01)
+		decoder_control(PTZ_RIGHT_UP);
+	else		
+		decoder_control(PTZ_RIGHT_DOWN);
+}
+function rightdown_onmouseup() 
+{
+	if (!ptz_type) decoder_control(PTZ_STOP);
+}
+function center_onclick() 
+{
+	if (!ptz_type) decoder_control(PTZ_CENTER);
+}
+function vpatrol_onclick() 
+{
+	if (!ptz_type) decoder_control(PTZ_VPATROL);
+}
+function vpatrolstop_onclick() 
+{
+	if (!ptz_type) decoder_control(PTZ_VPATROL_STOP);
+}
+function hpatrol_onclick() 
+{
+	ptz_type?decoder_control(PTZ_PELCO_D_HPATROL):decoder_control(PTZ_HPATROL);
+}
+function hpatrolstop_onclick() 
+{
+	ptz_type?decoder_control(PTZ_PELCO_D_HPATROL_STOP):decoder_control(PTZ_HPATROL_STOP);
+}
+function set_resolution()
+{
+	camera_control(0,resolution_sel.value);
+	setTimeout('parent.parent.main.location.reload()',2000);
+}
+function plus_brightness()
+{
+	val=brightness_input.value;
+	if (val++<15)
+	{
+		brightness_input.value=val;
+		camera_control(1,val*16);
+	}
+}
+function minus_brightness()
+{
+	val=brightness_input.value;
+	if (val-->0)
+	{
+		brightness_input.value=val;
+		camera_control(1,val*16);
+	}	
+}
+function plus_contrast()
+{
+	val=contrast_input.value;
+	if (val++<6)
+	{
+		contrast_input.value=val;
+		camera_control(2,val);
+	}
+}
+function minus_contrast()
+{
+	val=contrast_input.value;
+	if (val-->0)
+	{
+		contrast_input.value=val;
+		camera_control(2,val);
+	}
+}
+function setpreset()
+{
+	decoder_control(parseInt(preset.value));
+}
+
+function gopreset()
+{
+	decoder_control(parseInt(preset.value)+1);
+}
+function body_onload()
+{
+
+	gocenter.title=top.str_center;
+	vpatrol.title=top.str_vertical_patrol;
+	vpatrolstop.title=top.str_stop_vertical_patrol;
+	hpatrol.title=top.str_horizon_patrol;
+	hpatrolstop.title=top.str_stop_horizon_patrol;
+	switchon.title=top.str_switchon;
+	switchoff.title=top.str_switchoff;
+
+	resolution_sel.value=resolution;
+	mode_sel.value=mode;
+	brightness_input.value=Math.round(brightness /16);
+	contrast_input.value=contrast;
+	image_reversal.checked=(flip&0x01)?true:false;
+	image_mirror.checked=(flip&0x02)?true:false;
+}
+</script>
+ <script language="javascript">
+     function imgdragstart() { return false; }
+</script>
+<body onLoad="body_onload()">
+<iframe name="action_zone" style="display:none"></iframe>
+<table width="210" class="h2 f12b" style="font-family:Arial"  border="0" cellpadding="0" cellspacing="0" >
+	<tr height="3"></tr>
+	<tr>
+		<td colspan="2">
+			<table border="0" cellpadding="0" cellspacing="0" width=100%>
+				<tr>
+					<td align="center">
+						<div><img style="cursor:pointer" id="leftup" src="images/leftup_up.png" onMouseDown="leftup_onmousedown()" onMouseUp="leftup_onmouseup()" onMouseOver="this.src=' images/leftup_down.png'" onMouseOut="this.src=' images/leftup_up.png'"/><img style="cursor:pointer" id="up" src="images/up_up.png" onMouseDown="up_onmousedown()" onMouseUp="up_onmouseup()" onMouseOver="this.src=' images/up_down.png'" onMouseOut="this.src=' images/up_up.png'"/><img style="cursor:pointer" id="rightup" src="images/rightup_up.png" onMouseDown="rightup_onmousedown()" onMouseUp="rightup_onmouseup()" onMouseOver="this.src=' images/rightup_down.png'" onMouseOut="this.src=' images/rightup_up.png'"/></div>
+						<div><img style="cursor:pointer" id="left" src="images/left_up.png" onMouseDown="left_onmousedown()" onMouseUp="left_onmouseup()"  onmouseover="this.src=' images/left_down.png'" onMouseOut="this.src=' images/left_up.png'"/><img  style="cursor:pointer" id="gocenter" src="images/center_up.png" onMouseOver="this.src=' images/center_down.png'" onMouseOut="this.src=' images/center_up.png'" onClick="center_onclick()"/><img style="cursor:pointer" id="right" src="images/right_up.png" onMouseDown="right_onmousedown()" onMouseUp="right_onmouseup()"   onmouseover="this.src=' images/right_down.png'" onMouseOut="this.src=' images/right_up.png'"/></div>
+						<div><img style="cursor:pointer" id="leftdown" src="images/leftdown_up.png" onMouseDown="leftdown_onmousedown()" onMouseUp="leftdown_onmouseup()"  onmouseover="this.src=' images/leftdown_down.png'" onMouseOut="this.src=' images/leftdown_up.png'"/><img  style="cursor:pointer" id="down" src="images/down_up.png" onMouseDown="down_onmousedown()" onMouseUp="down_onmouseup()"  onmouseover="this.src=' images/down_down.png'" onMouseOut="this.src=' images/down_up.png'"/><img  style="cursor:pointer" id="rightdown" src="images/rightdown_up.png" onMouseDown="rightdown_onmousedown()" onMouseUp="rightdown_onmouseup()"   onmouseover="this.src=' images/rightdown_down.png'" onMouseOut="this.src=' images/rightdown_up.png'"/></div>
+					</td>
+					<td  align="right" >
+						<div style="height:40px"> <img style="cursor:pointer" id="vpatrol" src="images/vpatrol_up.png" onClick="vpatrol_onclick()" onMouseOver="this.src=' images/vpatrol_down.png'" onMouseOut="this.src=' images/vpatrol_up.png'" /> &nbsp;<img style="cursor:pointer" id="vpatrolstop" src="images/R_stop_up.png" onClick="vpatrolstop_onclick()" onMouseOver="this.src=' images/R_stop_down.png'" onMouseOut="this.src=' images/R_stop_up.png'" /> </div>
+						<div style="height:40px"> <img style="cursor:pointer" id="hpatrol" src="images/hpatrol_up.png" onClick="hpatrol_onclick()" onMouseOver="this.src=' images/hpatrol_down.png'" onMouseOut="this.src=' images/hpatrol_up.png'" /> &nbsp;<img style="cursor:pointer" id="hpatrolstop" src="images/R_stop_up.png" onClick="hpatrolstop_onclick()" onMouseOver="this.src=' images/R_stop_down.png'" onMouseOut="this.src=' images/R_stop_up.png'" /></div>
+						<div style="height:40px"> <img style="cursor:pointer" id="switchon" src="images/switchon_up.png" onClick="decoder_control(IO_ON)" onMouseOver="this.src=' images/switchon_down.png'" onMouseOut="this.src=' images/switchon_up.png'" /> &nbsp;<img style="cursor:pointer" id="switchoff" src="images/switchoff_up.png"  onClick="decoder_control(IO_OFF)" onMouseOver="this.src=' images/switchoff_down.png'" onMouseOut="this.src=' images/switchoff_up.png'" /> </div>
+					</td>
+				</tr>
+			</table>
+		</td>
+	</tr>
+	<tr height="10"></tr>
+	<tr height="20"><td colspan="2"><input id="image_reversal" type="checkbox" onClick="set_flip()"><script>document.write(top.str_reversal);</script>&nbsp;&nbsp;<input id="image_mirror" type="checkbox" onClick="set_flip()"><script>document.write(top.str_mirror);</script></td></tr>
+	<tr height="10"><td> </td></tr>
+	<tr height="20"><td width="60" width="40%"  align="left">&nbsp;<script>document.write(top.str_resolution);</script></td><td><SELECT id="resolution_sel" class="s4" onChange="set_resolution()"><OPTION value="8">320*240</OPTION><OPTION value="32">640*480</OPTION></SELECT></td></tr>
+	<tr height="5"><td> </td></tr>
+	<tr height="20">
+		<td width="60" width="40%" align=left>&nbsp;<script>document.write(top.str_mode);</script></td>
+		<td>
+			<SELECT class="s4" id="mode_sel" onChange="camera_control(3,value)"><OPTION value="0">50 HZ</OPTION><OPTION value="1">60 HZ</OPTION><OPTION value="2"><script>document.write(top.str_outdoor);</script></OPTION></SELECT>
+		</td>
+	</tr>
+	<tr height="5"><td> </td></tr>
+	<tr height="20">
+		<td width="40%" align=left>&nbsp;<script>document.write(top.str_brightness);</script></td>
+		<td>
+			<table class="s4" align=center>
+				<tr>
+					<td><img style="cursor:pointer" src="images/minus_up.png" onClick="minus_brightness()" onMouseOver="this.src=' images/minus_down.png'" onMouseout="this.src=' images/minus_up.png'"></td>
+					<td><input id="brightness_input" readonly maxLength="2" class="s3" size="2"></td>
+					<td><img style="cursor:pointer" src="images/plus_up.png" onClick="plus_brightness()" onMouseOver="this.src=' images/plus_down.png'" onMouseout="this.src=' images/plus_up.png'"></td>					
+				</tr>
+			</table>
+		</td>
+	</tr>
+	<tr height="5"><td> </td></tr>
+	<tr height="20">
+		<td width="40%" align=left>&nbsp;<script>document.write(top.str_contrast);</script></td>
+		<td>
+			<table class="s4" align=center>
+				<tr>
+					<td><img style="cursor:pointer" src="images/minus_up.png" onClick="minus_contrast()" onMouseOver="this.src=' images/minus_down.png'" onMouseout="this.src=' images/minus_up.png'"></td>
+					<td><input id="contrast_input" readonly maxLength="1" class="s3" size="2"></td>
+					<td><img style="cursor:pointer" src="images/plus_up.png" onClick="plus_contrast()" onMouseOver="this.src=' images/plus_down.png'" onMouseout="this.src=' images/plus_up.png'"></td>
+				</tr>
+			</table>
+		</td>
+	</tr>
+	<tr height="5"><td> </td></tr>
+	<tr height="20">
+		<td width="40%" align=left>&nbsp;<script>document.write(top.str_preset);</script></td>
+		<td class="h2">
+			<a href="javascript:setpreset()"><script>document.write(top.str_set1+"  ");</script></a>
+		            	<SELECT id="preset">
+		            		<OPTION value="30">1</OPTION>
+		            		<OPTION value="32">2</OPTION>
+		            		<OPTION value="34">3</OPTION>
+			                	<OPTION value="36">4</OPTION>
+			                	<OPTION value="38">5</OPTION>
+			                	<OPTION value="40">6</OPTION>
+			                	<OPTION value="42">7</OPTION>
+			                	<OPTION value="44">8</OPTION>
+		                </SELECT>
+			<a href="javascript:gopreset()"><script>document.write(top.str_go+"  ");</script></a>
+		</td>
+	</tr>
+	<tr height="5"></tr>
+</table>
+<script language="javascript">
+    for (i in document.images) document.images[i].ondragstart = imgdragstart;
+</script>
+</body>
+</html>
