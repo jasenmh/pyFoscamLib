@@ -1,7 +1,8 @@
 import urllib2
-from AuthHandlerHelper import PreemptiveBasicAuthHandler
+#from AuthHandlerHelper import PreemptiveBasicAuthHandler
 
-DEBUG = True
+DEBUG = False
+
 
 class Fi8918w:
     """
@@ -16,34 +17,40 @@ class Fi8918w:
         self.camera_id = ""
         self.camera_name = ""
         self.alarm_status = ""
-        self.auth_enabled = False
         self.auth_history = {}
 
     # ---------- Private methods ----------
-    def _digest_auth(self, url):
+    def _digest_auth(self):
         """
         This method adds a digest authentication opener to preemptively authenticate each request.
 
         Thanks to PockyBum522 and crew at FamiLab for contributing this code!
         """
 
-        #if url not in self.auth_history:
         if self.camera_url not in self.auth_history:
-            #self.auth_history[url] = True
             self.auth_history[self.camera_url] = True
         else:
             return
 
         password_mgr = urllib2.HTTPPasswordMgrWithDefaultRealm()
         authhandler = urllib2.HTTPDigestAuthHandler(password_mgr)  # PreemptiveBasicAuthHandler()
-        #authhandler.add_password(self.realm, url, self.username, self.password)
         authhandler.add_password(self.realm, self.camera_url, self.username, self.password)
         opener = urllib2.build_opener(authhandler)
         urllib2.install_opener(opener)
-        self.auth_enabled = True
 
         if DEBUG:
-            print "*DEBUG* digest auth enabled on %s" % url
+            print "*DEBUG* digest auth enabled on %s" % self.camera_url
+
+    @staticmethod
+    def _make_request(url):
+        resp = None
+
+        try:
+            resp = urllib2.urlopen(url)
+        except urllib2.HTTPError, e:
+            print e.headers
+
+        return resp
 
     def _query_camera(self, command):
         """ This method sends requests/commands to the camera when the return does not need to be saved to a binary
@@ -51,18 +58,12 @@ class Fi8918w:
         :param command: cgi request/command to the camera
         :return: returns the urllib2.urlopen return value
         """
-        nurl = self.camera_url + command
-
-        self._digest_auth(nurl)
+        self._digest_auth()
 
         if not self.camera_url or not command:
             return -1
 
-        resp = None
-        try:
-            resp = urllib2.urlopen(nurl)
-        except urllib2.HTTPError, e:
-            print e.headers
+        resp = Fi8918w._make_request(self.camera_url + command)
 
         return resp
 
@@ -73,20 +74,17 @@ class Fi8918w:
         :param command: cgi request/command to the camera
         :return: data stream
         """
-        nurl = self.camera_url + command
-
-        self._digest_auth(nurl)
+        self._digest_auth()
 
         if not self.camera_url or not command:
             return -1
 
-        b = None
-        try:
-            b = urllib2.urlopen(nurl)
-        except urllib2.HTTPError, e:
-            print e.headers
+        b = Fi8918w._make_request(self.camera_url + command)
 
-        return b.read()
+        if b:
+            return b.read()
+        else:
+            return b
 
     def _cam_pzt_step(self, command, degrees):
         if degrees < 1:
@@ -114,16 +112,19 @@ class Fi8918w:
 
         return status
 
-    # TODO: refactor 2nd argument in _query_camera()
-    # def set_motion_alarm(self, alarm):
-    #     if alarm:
-    #         arg = "motion_armed=1"
-    #     else:
-    #         arg = "motion_armed=0"
-    #
-    #     resp = self._query_camera('set_alarm.cgi', arg)
-    #
-    #     return -1 if resp == -1 else 1
+    def set_motion_alarm(self, alarm):
+        """ This method enables and disables the camera alarming on motion.
+        :param alarm: True - enable alarm, False - disable alarm
+        :return: True on success, False otherwise
+        """
+        if alarm:
+            arg = "motion_armed=1"
+        else:
+            arg = "motion_armed=0"
+
+        resp = self._query_camera('set_alarm.cgi?%s' % arg)
+
+        return False if resp is None else True
 
     def get_snapshot(self, fname=None):
         """ This method gets a snapshot from the camera and returns the image string.  If a filename is specified it
