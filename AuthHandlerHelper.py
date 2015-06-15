@@ -1,10 +1,13 @@
 import urllib2
 import base64
 
+DEBUG = True
+
 
 class PreemptiveDigestAuthHandler(urllib2.HTTPDigestAuthHandler):
     """
-    This class is based on @thom_nic's reply to http://stackoverflow.com/questions/4628610/does-urllib2-support-preemptive-authentication-authentication
+    This class is based on @thom_nic's reply to
+    http://stackoverflow.com/questions/4628610/does-urllib2-support-preemptive-authentication-authentication
     and digest auth code by PockyBum522 and crew at FamiLab.
     """
 
@@ -17,15 +20,17 @@ class PreemptiveDigestAuthHandler(urllib2.HTTPDigestAuthHandler):
         self.add_password = self.passwd.add_password
 
     def http_request(self, req):
+
         uri = req.get_full_url()
         user, pw = self.passwd.find_user_password(None, uri)
-        #logging.debug('ADDING REQUEST HEADER for uri (%s): %s:%s',uri,user,pw)
+
         if pw is None:
             return req
 
         raw = "%s:%s" % (user, pw)
         auth = 'Digest %s' % base64.b64encode(raw).strip()
         req.add_unredirected_header('Authorization', auth)
+
         return req
 
 

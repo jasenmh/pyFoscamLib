@@ -18,31 +18,8 @@ class Fi8918w:
         self.camera_name = ""
         self.alarm_status = ""
         self.auth_history = {}
-
+        self.password_mgr = None
     # ---------- Private methods ----------
-    def _digest_auth(self):
-        """
-        This method adds a digest authentication opener to preemptively authenticate each request.
-
-        Thanks to PockyBum522 and crew at FamiLab for contributing this code!
-        """
-
-        if self.camera_url not in self.auth_history:
-            self.auth_history[self.camera_url] = True
-        else:
-            return
-
-        # password_mgr = urllib2.HTTPPasswordMgrWithDefaultRealm()
-        # authhandler = urllib2.HTTPDigestAuthHandler(password_mgr)  # PreemptiveBasicAuthHandler()
-
-        authhandler = PreemptiveDigestAuthHandler()
-        authhandler.add_password(self.realm, self.camera_url, self.username, self.password)
-        opener = urllib2.build_opener(authhandler)
-        urllib2.install_opener(opener)
-
-        if DEBUG:
-            print "*DEBUG* digest auth enabled on %s" % self.camera_url
-
     @staticmethod
     def _make_request(url):
         resp = None
@@ -51,13 +28,40 @@ class Fi8918w:
             resp = urllib2.urlopen(url)
         except urllib2.HTTPError, e:
             if hasattr(e, 'headers'):
-                print e.headers
+                print "HTTPError exception: headers\n%s" % e.headers
             if hasattr(e, 'code'):
-                print e.code
+                print "HTTPError exception: code %d" % e.code
             else:
                 print "HTTPError exception: unable to read headers or code"
 
         return resp
+
+    def _digest_auth(self, url):
+        """
+        This method adds a digest authentication opener to preemptively authenticate each request.
+
+        Thanks to PockyBum522 and crew at FamiLab for contributing this code!
+        :param url:
+        """
+
+        if url not in self.auth_history:
+            self.auth_history[url] = True
+        else:
+            return
+
+        if not self.password_mgr:
+            self.password_mgr = urllib2.HTTPPasswordMgrWithDefaultRealm()
+
+        self.password_mgr.add_password(self.realm, url, self.username, self.password)
+        dig_handler = urllib2.HTTPDigestAuthHandler(self.password_mgr)  # PreemptiveBasicAuthHandler()
+        bas_handler = urllib2.HTTPBasicAuthHandler(self.password_mgr)
+        # authhandler = PreemptiveDigestAuthHandler()
+
+        opener = urllib2.build_opener(dig_handler, bas_handler)
+        urllib2.install_opener(opener)
+
+        if DEBUG:
+            print "*DEBUG* basic/digest auth enabled on %s" % self.camera_url
 
     def _query_camera(self, command):
         """ This method sends requests/commands to the camera when the return does not need to be saved to a binary
@@ -68,7 +72,7 @@ class Fi8918w:
         if not self.camera_url or not command:
             return None
 
-        self._digest_auth()
+        self._digest_auth(self.camera_url + command)
 
         resp = Fi8918w._make_request(self.camera_url + command)
 
@@ -84,7 +88,7 @@ class Fi8918w:
         if not self.camera_url or not command:
             return None
 
-        self._digest_auth()
+        self._digest_auth(self.camera_url + command)
 
         b = Fi8918w._make_request(self.camera_url + command)
 
