@@ -1,4 +1,4 @@
-# Python API and application for the Foscam FI8918W.
+# Python API for the Foscam FI8918W.
 
 ## Two Branches
 * master - depends on requests module
