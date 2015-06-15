@@ -1,5 +1,5 @@
 import urllib2
-#from AuthHandlerHelper import PreemptiveBasicAuthHandler
+from AuthHandlerHelper import PreemptiveDigestAuthHandler
 
 DEBUG = False
 
@@ -32,8 +32,10 @@ class Fi8918w:
         else:
             return
 
-        password_mgr = urllib2.HTTPPasswordMgrWithDefaultRealm()
-        authhandler = urllib2.HTTPDigestAuthHandler(password_mgr)  # PreemptiveBasicAuthHandler()
+        # password_mgr = urllib2.HTTPPasswordMgrWithDefaultRealm()
+        # authhandler = urllib2.HTTPDigestAuthHandler(password_mgr)  # PreemptiveBasicAuthHandler()
+
+        authhandler = PreemptiveDigestAuthHandler()
         authhandler.add_password(self.realm, self.camera_url, self.username, self.password)
         opener = urllib2.build_opener(authhandler)
         urllib2.install_opener(opener)
@@ -48,7 +50,10 @@ class Fi8918w:
         try:
             resp = urllib2.urlopen(url)
         except urllib2.HTTPError, e:
-            print e.headers
+            if hasattr(e, 'headers'):
+                print e.headers
+            else:
+                print "HTTPError exception: unable to read headers"
 
         return resp
 
@@ -61,7 +66,7 @@ class Fi8918w:
         self._digest_auth()
 
         if not self.camera_url or not command:
-            return -1
+            return None
 
         resp = Fi8918w._make_request(self.camera_url + command)
 
@@ -77,7 +82,7 @@ class Fi8918w:
         self._digest_auth()
 
         if not self.camera_url or not command:
-            return -1
+            return None
 
         b = Fi8918w._make_request(self.camera_url + command)
 
@@ -96,7 +101,7 @@ class Fi8918w:
     def get_status(self):
         resp = self._query_camera('get_params.cgi')
 
-        if resp == -1:
+        if not resp:
             status = -1
         else:
             status = {}

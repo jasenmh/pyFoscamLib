@@ -2,7 +2,7 @@ import urllib2
 import base64
 
 
-class PreemptiveBasicAuthHandler(urllib2.HTTPDigestAuthHandler):
+class PreemptiveDigestAuthHandler(urllib2.HTTPDigestAuthHandler):
     """
     This class is based on @thom_nic's reply to http://stackoverflow.com/questions/4628610/does-urllib2-support-preemptive-authentication-authentication
     and digest auth code by PockyBum522 and crew at FamiLab.
@@ -11,6 +11,8 @@ class PreemptiveBasicAuthHandler(urllib2.HTTPDigestAuthHandler):
     def __init__(self, password_mgr=None):
         if password_mgr is None:
                 password_mgr = urllib2.HTTPPasswordMgrWithDefaultRealm()
+        #super(PreemptiveDigestAuthHandler, self).__init__(password_mgr)
+        urllib2.HTTPDigestAuthHandler.__init__(self, password_mgr)
         self.passwd = password_mgr
         self.add_password = self.passwd.add_password
 
