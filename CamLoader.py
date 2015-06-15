@@ -7,7 +7,6 @@ class CamLoader:
     cameras = []
 
     def __init__(self):
-        # CamLoader.cameras = []
         pass
 
     @staticmethod
@@ -16,7 +15,6 @@ class CamLoader:
             return None
 
         fname = os.path.join(os.sep, os.getcwd(), "cameras", name)
-
         if not os.path.isfile(fname):
             return None
 
@@ -26,3 +24,16 @@ class CamLoader:
         CamLoader.cameras.append(camera)
 
         return camera
+
+    @staticmethod
+    def save_camera(name, creds):
+        if not name or not creds:
+            return False
+
+        fname = os.path.join(os.sep, os.getcwd, "cameras", name)
+        if os.path.isfile(fname):
+            return False
+
+        pickle.dump(creds, open(fname, "w"))
+
+        return True
