@@ -1,85 +1,91 @@
 import urllib2
-import re
-import base64
-import sys
+from AuthHandlerHelper import PreemptiveBasicAuthHandler
 
+DEBUG = True
 
-class fi8918w:
+class Fi8918w:
     """
     This class can be used to send commands to a Foscam FI8918W IP camera.
     """
 
-    def __init__(self, url="", username="", password=""):
-        self.camera_url = url
+    def __init__(self, url="", username="", password="", realm=None):
+        self.camera_url = "http://" + url + "/"
         self.username = username
         self.password = password
+        self.realm = realm
         self.camera_id = ""
         self.camera_name = ""
         self.alarm_status = ""
-        self.authheader = None
+        self.auth_enabled = False
+        self.auth_history = {}
 
     # ---------- Private methods ----------
-    def _basic_auth(self, url):
-        """ This method takes the requested URL, check if basic authentication is required and sets up the HTTP GET with the
-        base64 authentication.  Used http://www.voidspace.org.uk/python/articles/authentication.shtml as a guide for doing this
-        :param url: url to be requested from IP camera
-        :return: returns the urllib2.urlopen return value
+    def _digest_auth(self, url):
         """
-        if not self.username or not self.password or not url:
-            # invalid request
-            return -1
-        # Make a request
-        req = urllib2.Request(url)
-        # If we haven't set up authentication yet, try to cache it
-        if not self.authheader:
-            # Encode the basic authentication into a base64 string
-            try:
-                handle = urllib2.urlopen(req)
-            except IOError, e:
-                # Here we want to fail if there's authentication required on this page and we'll continue
-                pass
-            else:
-                # This page is not protected by authentication
-                return handle
-            # Extract the scheme and realm in using reg-ex
-            authline = e.headers['www-authenticate']
-            authobj = re.compile(r'''(?:\s*www-authenticate\s*:)?\s*(\w*)\s+realm=['"]([^'"]+)['"]''', re.IGNORECASE)
-            matchobj = authobj.match(authline)
-            scheme = matchobj.group(1)
-            _ = matchobj.group(2)   # un-used.  This would be the realm, left here for completeness
-            if scheme.lower() != 'basic':
-                print "Basic authentication failed for some reason (scheme is %s)" % (scheme.lower())
-                sys.exit(1)
-            base64string = base64.encodestring('%s:%s' % (self.username, self.password))[:-1]
-            self.authheader = "Basic %s" % base64string
+        This method adds a digest authentication opener to preemptively authenticate each request.
 
-        # Add the authentication header
-        req.add_header("Authorization", self.authheader)
-        return urllib2.urlopen(req)
+        Thanks to PockyBum522 and crew at FamiLab for contributing this code!
+        """
+
+        #if url not in self.auth_history:
+        if self.camera_url not in self.auth_history:
+            #self.auth_history[url] = True
+            self.auth_history[self.camera_url] = True
+        else:
+            return
+
+        password_mgr = urllib2.HTTPPasswordMgrWithDefaultRealm()
+        authhandler = urllib2.HTTPDigestAuthHandler(password_mgr)  # PreemptiveBasicAuthHandler()
+        #authhandler.add_password(self.realm, url, self.username, self.password)
+        authhandler.add_password(self.realm, self.camera_url, self.username, self.password)
+        opener = urllib2.build_opener(authhandler)
+        urllib2.install_opener(opener)
+        self.auth_enabled = True
+
+        if DEBUG:
+            print "*DEBUG* digest auth enabled on %s" % url
 
     def _query_camera(self, command):
-        """ This method sends requests/commands to the camera when the return does not need to be saved to a binary file.
+        """ This method sends requests/commands to the camera when the return does not need to be saved to a binary
+        file.
         :param command: cgi request/command to the camera
         :return: returns the urllib2.urlopen return value
         """
+        nurl = self.camera_url + command
+
+        self._digest_auth(nurl)
+
         if not self.camera_url or not command:
             return -1
-        nurl = "http://" + self.camera_url + "/" + command
-        # Set up the basic authentication, and get the data
-        return self._basic_auth(nurl)
+
+        resp = None
+        try:
+            resp = urllib2.urlopen(nurl)
+        except urllib2.HTTPError, e:
+            print e.headers
+
+        return resp
 
     def _query_camera_binary(self, command):
         """
         This method sends requests/commands to the camera when the return does need to be saved to a binary file.
         Used for saving snapshots from the camera for example.
         :param command: cgi request/command to the camera
-        :param arg: base pathname and file name without extension where the picture will be saved
-        :return: pathname and filename of the output file
+        :return: data stream
         """
+        nurl = self.camera_url + command
+
+        self._digest_auth(nurl)
+
         if not self.camera_url or not command:
             return -1
-        nurl = "http://" + self.camera_url + "/" + command
-        b = self._basic_auth(nurl)
+
+        b = None
+        try:
+            b = urllib2.urlopen(nurl)
+        except urllib2.HTTPError, e:
+            print e.headers
+
         return b.read()
 
     def _cam_pzt_step(self, command, degrees):
@@ -108,19 +114,20 @@ class fi8918w:
 
         return status
 
-    def set_motion_alarm(self, alarm):
-        if alarm:
-            arg = "motion_armed=1"
-        else:
-            arg = "motion_armed=0"
-
-        resp = self._query_camera('set_alarm.cgi', arg)
-
-        return -1 if resp == -1 else 1
+    # TODO: refactor 2nd argument in _query_camera()
+    # def set_motion_alarm(self, alarm):
+    #     if alarm:
+    #         arg = "motion_armed=1"
+    #     else:
+    #         arg = "motion_armed=0"
+    #
+    #     resp = self._query_camera('set_alarm.cgi', arg)
+    #
+    #     return -1 if resp == -1 else 1
 
     def get_snapshot(self, fname=None):
-        """ This method gets a snapshot from the camera and returns the image string.  If a filename is specified it writes
-        out to the file too
+        """ This method gets a snapshot from the camera and returns the image string.  If a filename is specified it
+        writes out to the file too
         :param fname: optional, name of an image file to which the data will be written
         :return: returns the image string
         """
@@ -142,6 +149,13 @@ class fi8918w:
         :return: returns the url2lib response from the camera
         """
         return self._query_camera('decoder_control.cgi?command=94')
+
+    def cam_center(self):
+        """ This method sends command 25 to the camera which runs a set of movements that centers the camera
+        :return: returns the url2lib response from the camera
+        """
+        resp = self._query_camera('decoder_control.cgi?command=25')
+        return resp
 
     def cam_step_up(self, degrees=1):
         """ Send command 0 (up) to the decoder_control.cgi to make the camera move up
@@ -166,8 +180,8 @@ class fi8918w:
         return self._cam_pzt_step(command=6, degrees=degrees)
 
     def cam_step_right(self, degrees=1):
-        """ Send command 4 (right) to the decoder_control.cgi to make the camera move right.  Note this is opposite of the
-        camera documentation.  This was tested with camera on desk.
+        """ Send command 4 (right) to the decoder_control.cgi to make the camera move right.  Note this is opposite of
+        the camera documentation.  This was tested with camera on desk.
         :param degrees: degrees of the desired move
         :return: -1 on invalid commands or move amount
         """

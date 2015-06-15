@@ -8,7 +8,8 @@ _Working_
 * Pan/tilt camera
 * Set and go to preset positions
 * Patrol mode
-* Authenticates through basic auth (when needed)
+* Authenticates through digest auth (Fixed #4)
 
 _To Do_
+* Optimize digest auth to speed image download
 * Finish the full api
