@@ -1,6 +1,10 @@
-Python API and application for the Foscam FI8918W.
+# Python API and application for the Foscam FI8918W.
 
-_Working_
+## Two Branches
+* master - depends on requests module
+* vanilla - vanilla python, no dependencies, much slower
+
+## Working
 * Connect to camera by URL
 * Query camera status
 * Capture image from camera
@@ -8,8 +12,7 @@ _Working_
 * Pan/tilt camera
 * Set and go to preset positions
 * Patrol mode
-* Authenticates through digest auth (Fixed #4)
+* Authenticates through digest auth
 
-_To Do_
-* Optimize digest auth to speed image download
+## To Do
 * Finish the full api
