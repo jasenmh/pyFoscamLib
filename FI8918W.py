@@ -1,5 +1,6 @@
-import urllib2
-#from AuthHandlerHelper import PreemptiveBasicAuthHandler
+import re
+import requests
+from requests.auth import HTTPDigestAuth
 
 DEBUG = False
 
@@ -17,38 +18,14 @@ class Fi8918w:
         self.camera_id = ""
         self.camera_name = ""
         self.alarm_status = ""
-        self.auth_history = {}
+        self.auth = None
 
     # ---------- Private methods ----------
-    def _digest_auth(self):
-        """
-        This method adds a digest authentication opener to preemptively authenticate each request.
+    def _make_request(self, url):
+        if not self.auth:
+            self.auth = HTTPDigestAuth(self.username, self.password)
 
-        Thanks to PockyBum522 and crew at FamiLab for contributing this code!
-        """
-
-        if self.camera_url not in self.auth_history:
-            self.auth_history[self.camera_url] = True
-        else:
-            return
-
-        password_mgr = urllib2.HTTPPasswordMgrWithDefaultRealm()
-        authhandler = urllib2.HTTPDigestAuthHandler(password_mgr)  # PreemptiveBasicAuthHandler()
-        authhandler.add_password(self.realm, self.camera_url, self.username, self.password)
-        opener = urllib2.build_opener(authhandler)
-        urllib2.install_opener(opener)
-
-        if DEBUG:
-            print "*DEBUG* digest auth enabled on %s" % self.camera_url
-
-    @staticmethod
-    def _make_request(url):
-        resp = None
-
-        try:
-            resp = urllib2.urlopen(url)
-        except urllib2.HTTPError, e:
-            print e.headers
+        resp = requests.get(url, auth=self.auth)
 
         return resp
 
@@ -58,14 +35,15 @@ class Fi8918w:
         :param command: cgi request/command to the camera
         :return: returns the urllib2.urlopen return value
         """
-        self._digest_auth()
-
         if not self.camera_url or not command:
-            return -1
+            return None
 
-        resp = Fi8918w._make_request(self.camera_url + command)
+        resp = self._make_request(self.camera_url + command)
 
-        return resp
+        if resp:
+            return resp
+        else:
+            return None
 
     def _query_camera_binary(self, command):
         """
@@ -74,38 +52,37 @@ class Fi8918w:
         :param command: cgi request/command to the camera
         :return: data stream
         """
-        self._digest_auth()
-
         if not self.camera_url or not command:
-            return -1
+            return None
 
-        b = Fi8918w._make_request(self.camera_url + command)
+        b = self._make_request(self.camera_url + command)
 
         if b:
-            return b.read()
+            return b.content
         else:
-            return b
+            return None
 
     def _cam_pzt_step(self, command, degrees):
         if degrees < 1:
             # invalid movement amount makes the camera do funny things
-            return -1
+            return None
         return self._query_camera('decoder_control.cgi?command={0}&onestep=1&degree={1}'.format(command, degrees))
 
     # ---------- Public methods ----------
     def get_status(self):
         resp = self._query_camera('get_params.cgi')
 
-        if resp == -1:
-            status = -1
+        if resp is None:
+            status = None
         else:
             status = {}
-            for line in resp:
-                line = line[4:]  # strip "var "
-                line = line.rstrip(';\n')
-                parts = line.split('=')
-                if len(parts) > 1:
-                    status[parts[0]] = parts[1].replace("'", "")
+            for line in resp.text.split("\n"):
+                m = re.search("var ([\w.]+)='*([\w.-]+)'*", line)
+                if m:
+                    status[m.group(1)] = m.group(2)
+                else:
+                    if DEBUG:
+                        print "failed parsing %s" % line
 
             self.camera_id = status['id']
             self.camera_name = status['alias']
@@ -124,7 +101,7 @@ class Fi8918w:
 
         resp = self._query_camera('set_alarm.cgi?%s' % arg)
 
-        return False if resp is None else True
+        return False if not resp else True
 
     def get_snapshot(self, fname=None):
         """ This method gets a snapshot from the camera and returns the image string.  If a filename is specified it
@@ -161,14 +138,14 @@ class Fi8918w:
     def cam_step_up(self, degrees=1):
         """ Send command 0 (up) to the decoder_control.cgi to make the camera move up
         :param degrees: degrees of the desired move
-        :return: -1 on invalid commands or move amount
+        :return: None on invalid commands or move amount
         """
         return self._cam_pzt_step(command=0, degrees=degrees)
 
     def cam_step_down(self, degrees=1):
         """ Send command 2 (down) to the decoder_control.cgi to make the camera move down
         :param degrees: degrees of the desired move
-        :return: -1 on invalid commands or move amount
+        :return: None on invalid commands or move amount
         """
         return self._cam_pzt_step(command=2, degrees=degrees)
 
@@ -176,7 +153,7 @@ class Fi8918w:
         """ Send command 6 (left) to the decoder_control.cgi to make the camera move left.  Note this is opposite of the
         camera documentation.  This was tested with camera on desk.
         :param degrees: degrees of the desired move
-        :return: -1 on invalid commands or move amount
+        :return: None on invalid commands or move amount
         """
         return self._cam_pzt_step(command=6, degrees=degrees)
 
@@ -184,7 +161,7 @@ class Fi8918w:
         """ Send command 4 (right) to the decoder_control.cgi to make the camera move right.  Note this is opposite of
         the camera documentation.  This was tested with camera on desk.
         :param degrees: degrees of the desired move
-        :return: -1 on invalid commands or move amount
+        :return: None on invalid commands or move amount
         """
         return self._cam_pzt_step(command=4, degrees=degrees)
 
@@ -211,11 +188,11 @@ class Fi8918w:
     def set_preset(self, preset_num=1):
         """ Sets the non-volatile preset indicated to the current PZT position
         :param preset_num: location 1-8 for presets
-        :return: -1 on failure otherwise the urllib2 response
+        :return: None on failure otherwise the urllib2 response
         """
         if 0 > preset_num > 8:
             # Invalid preset #
-            return -1
+            return None
             # commands 30..45 alternate set preset #, goto preset# starting at command 30
         command = (preset_num * 2 - 2) + 30
         self._query_camera('decoder_control.cgi?command={0}'.format(command))
@@ -223,11 +200,11 @@ class Fi8918w:
     def goto_preset(self, preset_num=1):
         """ Moves the PZT to the non-volatile preset indicated
         :param preset_num: location 1-8 for presets
-        :return: -1 on failure otherwise the urllib2 response
+        :return: None on failure otherwise the urllib2 response
         """
         if 0 > preset_num > 8:
             # Invalid preset #
-            return -1
+            return None
         # commands 30..45 alternate set preset #, goto preset# starting at command 30
         command = (preset_num * 2 - 1) + 30
         self._query_camera('decoder_control.cgi?command={0}'.format(command))
