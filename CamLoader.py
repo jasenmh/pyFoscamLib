@@ -1,6 +1,7 @@
 import os
 import pickle
 from FI8918W import Fi8918w as Foscam
+from AuthHandlerHelper import CamCredentials
 
 
 class CamLoader:
@@ -26,3 +27,14 @@ class CamLoader:
         CamLoader.cameras.append(camera)
 
         return camera
+
+    @staticmethod
+    def save_camera(name, creds):
+        fname = os.path.join(os.sep, os.getcwd(), "cameras", name)
+
+        if os.path.isfile(fname):
+            return None
+
+        pickle.dump(creds, open(fname, "w"))
+
+        return True
