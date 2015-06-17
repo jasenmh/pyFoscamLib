@@ -31,10 +31,10 @@ class CamLoader:
         if not name or not creds:
             return False
 
-#        fname = os.path.join(os.sep, os.getcwd, "cameras", name)
-#        if os.path.isfile(fname):
-#            return False
-        fname = "cameras/%s" % name
+        fname = os.path.join(os.sep, os.getcwd(), "cameras", name)
+        if os.path.isfile(fname):
+            return False
+        # fname = "cameras/%s" % name
 
         # TODO: open file in binary mode?
         pickle.dump(creds, open(fname, "w"))
