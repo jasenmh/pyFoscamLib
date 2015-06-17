@@ -10,6 +10,7 @@ class Fi8918w:
     This class can be used to send commands to a Foscam FI8918W IP camera.
     """
 
+    # TODO: replace individual cred pieces with CamCredentials class
     def __init__(self, url="", username="", password="", realm=None):
         self.camera_url = "http://" + url + "/"
         self.username = username

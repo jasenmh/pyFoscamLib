@@ -1,6 +1,6 @@
 import os
 import pickle
-from FI8918W import Fi8918w as Foscam
+from FI8918W import Fi8918w
 
 
 class CamLoader:
@@ -18,9 +18,10 @@ class CamLoader:
         if not os.path.isfile(fname):
             return None
 
+        # TODO: open file in binary mode?
         creds = pickle.load(open(fname, "r"))
 
-        camera = Foscam(creds.url, creds.username, creds.password)
+        camera = Fi8918w(creds.url, creds.username, creds.password)
         CamLoader.cameras.append(camera)
 
         return camera
@@ -30,10 +31,12 @@ class CamLoader:
         if not name or not creds:
             return False
 
-        fname = os.path.join(os.sep, os.getcwd, "cameras", name)
-        if os.path.isfile(fname):
-            return False
+#        fname = os.path.join(os.sep, os.getcwd, "cameras", name)
+#        if os.path.isfile(fname):
+#            return False
+        fname = "cameras/%s" % name
 
+        # TODO: open file in binary mode?
         pickle.dump(creds, open(fname, "w"))
 
         return True

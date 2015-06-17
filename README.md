@@ -16,3 +16,17 @@
 
 ## To Do
 * Finish the full api
+
+## To Use
+
+```python
+from pyFoscamLib import CamCredentials
+from pyFoscamLib import CamLoader
+
+# create a camera profile
+cr = CamCredentials("ip_addr:port", "username", "password")
+CamLoader.save_camera("camera_name", cr)
+
+# to create a camera instance
+camera = CamLoader.create_camera("camera_name")
+
